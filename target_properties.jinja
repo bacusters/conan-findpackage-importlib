@@ -1,0 +1,19 @@
+# Assign target properties
+set_target_properties({{namespace}}::{{name}} PROPERTIES
+INTERFACE_LINK_LIBRARIES
+    {%- for config in configs %}
+    $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_LIBRARIES_TARGETS_{{config.upper()}}}
+                        ${{'{'}}{{name}}_LINKER_FLAGS_{{config.upper()}}_LIST}>
+    {%- endfor %}
+INTERFACE_INCLUDE_DIRECTORIES
+    {%- for config in configs %}
+    $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_INCLUDE_DIRS_{{config.upper()}}}>
+    {%- endfor %}
+INTERFACE_COMPILE_DEFINITIONS
+    {%- for config in configs %}
+    $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_DEFINITIONS_{{config.upper()}}}>
+    {%- endfor %}
+INTERFACE_COMPILE_OPTIONS
+    {%- for config in configs %}
+    $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_OPTIONS_{{config.upper()}}_LIST}>
+    {%- endfor %}

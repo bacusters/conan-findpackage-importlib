@@ -1,0 +1,71 @@
+{%- macro tvar(var) -%}
+{{pkg.name+'_'+var+'_'+build_type.upper() }}
+{%- endmacro -%}
+{%- macro tvalue(var) -%}
+{{(pkg.name+'_'+var+'_'+build_type.upper()) | cmake_value}}
+{%- endmacro -%}
+
+# Directly from Conan
+{%-for cmake_var, mapping in component_vars.items()%}
+set({{tvar(cmake_var)}} {{deps[mapping['key']] | cmake_apply_filter(mapping)}} )
+{%-endfor %}
+
+# Computed
+set({{tvar('LINKER_FLAGS')}}_LIST
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{deps.sharedlinkflags| cmake_flagsjoin}}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{deps.sharedlinkflags| cmake_flagsjoin}}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{deps.exelinkflags | cmake_flagsjoin }}>"
+)
+set({{tvar('COMPILE_OPTIONS')}}_LIST "{{deps.cxxflags|cmake_flagsjoin(';')}}" "{{deps.cxxflags|cmake_flagsjoin(';')}}")
+set({{tvar('LIBRARIES_TARGETS')}} "") # Will be filled later, if CMake 3
+set({{tvar('LIBRARIES')}} "") # Will be filled later
+set({{tvar('LIBRARIES')}} "") # Same as {name}_LIBRARIES
+set({{tvar('FRAMEWORKS_FOUND')}} "") # Will be filled later
+
+conan_find_apple_frameworks({{tvar('FRAMEWORKS_FOUND')}} "{{tvalue('FRAMEWORKS')}}" 
+    "{{tvalue('FRAMEWORK_DIRS')}}")
+
+mark_as_advanced(
+    {{tvar('INCLUDE_DIRS')}}
+    {{tvar('INCLUDE_DIR')}}
+    {{tvar('INCLUDES')}}
+    {{tvar('DEFINITIONS')}}
+    {{tvar('LINKER_FLAGS')}}
+    {{tvar('COMPILE_DEFINITIONS')}}
+    {{tvar('COMPILE_OPTIONS')}}
+    {{tvar('LIBRARIES')}}
+    {{tvar('LIBS')}}
+    {{tvar('LIBRARIES_TARGETS')}})
+
+# Find the real .lib/.a and add them to {{name}}_LIBS and {{name}}_LIBRARY_LIST
+set({{tvar('LIBRARY_LIST')}} {{deps.libs}})
+
+# Gather all the libraries that should be linked to the targets (do not touch existing variables):
+set(_{{tvar('DEPENDENCIES')}} "{{tvalue('FRAMEWORKS_FOUND')}} {{tvalue('SYSTEM_LIBS')}} {{deps_names}}")
+
+conan_package_library_targets(  LIBRARIES       "{{tvalue('LIBRARY_LIST')}}"
+                                LIBDIRS         "{{tvalue('LIB_DIRS')}}"
+                                DEPENDENCIES    "{{tvalue('DEPENDENCIES')}}"
+                                OUT_LIBS        {{tvar('LIBRARIES')}}
+                                OUT_LIB_TARGETS {{tvar('LIBRARIES_TARGETS')}}
+                                BUILD_TYPE      "{{build_type}}"
+                                PACKAGE_NAME    "{{name}}")
+
+set({{tvar('LIBS')}} {{tvalue('LIBRARIES')}})
+
+foreach(_FRAMEWORK {{tvalue('FRAMEWORKS_FOUND')}})
+    list(APPEND {{tvar('LIBRARIES_TARGETS')}} ${_FRAMEWORK})
+    list(APPEND {{tvar('LIBRARIES')}} ${_FRAMEWORK})
+endforeach()
+
+foreach(_SYSTEM_LIB {{tvalue('SYSTEM_LIBS')}})
+    list(APPEND {{tvar('LIBRARIES_TARGETS')}} ${_SYSTEM_LIB})
+    list(APPEND {{tvar('LIBRARIES')}} ${_SYSTEM_LIB})
+endforeach()
+
+# We need to add our requirements too
+set({{tvar('LIBRARIES_TARGETS')}} "{{tvalue('LIBRARIES_TARGETS')}};{{deps_names}}")
+set({{tvar('LIBRARIES')}} "{{tvalue('LIBRARIES')}};{{deps_names}}")
+
+set(CMAKE_MODULE_PATH {{deps.build_paths|cmake_pathsjoin}} ${CMAKE_MODULE_PATH})
+set(CMAKE_PREFIX_PATH {{deps.build_paths|cmake_pathsjoin}} ${CMAKE_PREFIX_PATH})

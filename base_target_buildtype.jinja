@@ -1,0 +1,12 @@
+########## MACROS ###########################################################################
+#############################################################################################
+{{ conan_message }}
+{{ conan_find_apple_frameworks }}
+{{ conan_package_library_targets }}
+
+{% block global_vars %}
+{% include 'global_target_buildtype.tpl' %}
+{% endblock %}
+
+{% block components %}
+{% endblock %}

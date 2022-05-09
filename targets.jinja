@@ -1,0 +1,32 @@
+{%- for comp_name, comp in components %}
+{% set comp_target = pkg.namespace + '::' + comp_name %}
+if(NOT TARGET {{ comp_target }})
+    add_library({{ comp_target }} {{comp.import_lib_info.import_type}} IMPORTED)
+endif()
+
+{%- endfor %}
+if(NOT TARGET {{ pkg.namespace }}::{{ pkg.name }})
+    add_library({{ pkg.namespace }}::{{ pkg.name }} INTERFACE IMPORTED)
+endif()
+
+# Load the debug and release library finders
+set(_TARGET_PREFIX {{ pkg.filename }}Target)
+get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+file(GLOB CONFIG_FILES "${_DIR}/${_TARGET_PREFIX}-*.cmake")
+
+foreach(f ${CONFIG_FILES})
+    include(${f})
+endforeach()
+
+{% if components|length %} {# Non-empty components#}
+if({{ pkg_filename }}_FIND_COMPONENTS)
+    foreach(_FIND_COMPONENT {{ pkg.filename+'_FIND_COMPONENTS' |cmake_val }})
+        list(FIND {{ pkg.name }}_COMPONENTS_{{ build_type }} "{{ pkg.namespace }}::${_FIND_COMPONENT}" _index)
+        if(${_index} EQUAL -1)
+            conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg.name }}'")
+        else()
+            conan_message(STATUS "Conan: Component '${_FIND_COMPONENT}' found in package '{{ pkg.name }}'")
+        endif()
+    endforeach()
+endif()
+{% endif %}

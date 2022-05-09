@@ -1,0 +1,60 @@
+{% extends "base_config.tpl" %}
+
+{% block target_props %}
+########## TARGETS PROPERTIES ###############################################################
+#############################################################################################
+{%- for comp_name, comp in components %}
+{% set comp_target = pkg.namespace + "::" + comp_name %}
+{%- macro tvalue(var, config) -%}
+{{'${'+pkg.name+'_'+comp_name+'_'+var+'_'+config.upper()+'}'}}
+{%- endmacro -%}
+########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
+
+set_target_properties({{comp_target}} 
+PROPERTIES
+    INTERFACE_LINK_LIBRARIES
+    {%- for config in configs %}
+    $<$<CONFIG:{{config}}>:{{tvalue('LINK_LIBS', config)}} {{tvalue('LINKER_FLAGS_LIST', config)}}>
+    {%- endfor %}
+    
+    INTERFACE_INCLUDE_DIRECTORIES
+    {%- for config in configs %}
+    $<$<CONFIG:{{config}}>:{{tvalue('INCLUDE_DIRS', config)}}>
+    {%- endfor %}
+    
+    INTERFACE_COMPILE_DEFINITIONS
+    {%- for config in configs %}
+    $<$<CONFIG:{{config}}>:{{tvalue('COMPILE_DEFINITIONS', config)}}>
+    {%- endfor %}
+
+    INTERFACE_COMPILE_OPTIONS
+    {%- for config in configs %}
+    $<$<CONFIG:{{config}}>:
+        {{tvalue('COMPILE_OPTIONS_C', config)}}
+        {{tvalue('COMPILE_OPTIONS_CXX', config)}}>
+    {%- endfor %})
+set({{ pkg.name }}_{{ comp_name }}_TARGET_PROPERTIES TRUE)
+
+{%- endfor %}
+
+########## GLOBAL TARGET PROPERTIES #########################################################
+
+if(NOT {{ pkg.name }}_{{ pkg.name }}_TARGET_PROPERTIES)
+    set_property(TARGET {{ pkg.namespace }}::{{ pkg.name }} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+                    {%- for config in configs %}
+                    $<$<CONFIG:{{config}}>:{{ pkg.name+'_COMPONENTS_'+config.upper()|cmake_val }}>
+                    {%- endfor %})
+endif()
+{% endblock %}
+
+{% block build_modules %}
+########## BUILD MODULES ####################################################################
+#############################################################################################
+{% import 'build_modules.tpl' as mods %}
+
+{%- for comp_name, comp in components %}
+
+########## COMPONENT {{ comp_name }} BUILD MODULES ##########################################
+{{ mods.include_build_modules(pkg.name+'_'+comp_name,configs) }}
+{%- endfor %}
+{% endblock %}

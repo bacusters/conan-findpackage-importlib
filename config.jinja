@@ -1,0 +1,26 @@
+{% extends "base_config.tpl" %}
+
+{% block target_props %}
+{% include 'target_properties.tpl' %}
+{% endblock %}
+
+{% block build_modules %}
+{% import 'build_modules.tpl' as mods %}
+{{ mods.include_build_modules(name,configs) }}
+{% endblock %}
+
+{% block find_dependencies %}
+# Library dependencies
+include(CMakeFindDependencyMacro)
+{% for dep_filename in public_deps_filenames -%}
+if(NOT {{dep_filename}}_FOUND)
+    if(${CMAKE_VERSION} VERSION_LESS "3.9.0")
+        find_package({{dep_filename}} REQUIRED NO_MODULE)
+    else()
+        find_dependency({{dep_filename}} REQUIRED NO_MODULE)
+    endif()
+else()
+    message(STATUS "Dependency {{dep_filename}} already found")
+endif()
+{%- endfor %}
+{% endblock %}

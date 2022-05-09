@@ -1,0 +1,50 @@
+{% extends 'base_target_buildtype.tpl' %}
+{% block global_vars %}
+{{ super() }}
+set({{ pkg.name }}_COMPONENTS_{{ build_type }} {{ pkg_components }})
+{% endblock %}
+
+{% block components %}
+{%- for comp_name, comp in components %}
+{# Helpers macros #}
+{%- macro tvalue(var) -%}
+    {{ (pkg.name+'_'+comp_name+'_'+var+'_'+build_type.upper()) | cmake_val}}
+{%- endmacro -%}
+{%- macro tvar(var) -%}
+    {{pkg.name+'_'+comp_name+'_'+var+'_'+build_type.upper()}}
+{%- endmacro -%}
+
+########### COMPONENT {{ comp_name }} VARIABLES #############################################
+{%- for cmake_name, mapping in component_vars.items() -%}
+set({{ tvar(cmake_name)}} {{ comp[mapping['key']] | cmake_apply_filter(mapping)}})
+{%- endfor %}
+set({{ tvar('LINKER_FLAGS_LIST') }}
+        $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ comp.sharedlinkflags_list }}>
+        $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ comp.sharedlinkflags_list }}>
+        $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ comp.exelinkflags_list }}>
+)
+
+########## COMPONENT {{ comp_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
+set({{ tvar('FRAMEWORKS_FOUND')}} "")
+conan_find_apple_frameworks({{ tvar('FRAMEWORKS_FOUND')}} 
+    "{{ tvalue('FRAMEWORKS')}}" "{{ tvalue('FRAMEWORK_DIRS') }}")
+
+set({{ tvar('LIB_TARGETS')}} "")
+set({{ tvar('NOT_USED')}} "")
+set({{ tvar('LIBS_FRAMEWORKS_DEPS')}} {{ tvalue('FRAMEWORKS_FOUND')}} 
+    {{ tvalue('SYSTEM_LIBS') }} {{ tvalue('DEPENDENCIES') }})
+conan_package_library_targets(  LIBRARIES       "{{tvalue('LIBS')}}"
+                                LIB_TYPE        {{comp.import_lib_info.import_type}}
+                                LIBDIRS         "{{tvalue('LIB_DIRS')}}"
+                                DEPENDENCIES    "{{tvalue('LIBS_FRAMEWORKS_DEPS')}}"
+                                OUT_LIBS        {{tvar('NOT_USED')}}
+                                OUT_LIB_TARGETS {{tvar('LIB_TARGETS')}}
+                                BUILD_TYPE      "{{build_type}}"
+                                PACKAGE_NAME    "{{ pkg.name }}_{{ comp_name }}"
+                                HAS_IMPORTLIB   {{'ON' if comp.import_lib_info.has_importlib else 'OFF' }}
+                                IMPORTED_LOCATION {{comp.import_lib_info.dll_location|default('')}})
+
+set({{tvar('LINK_LIBS')}} {{ tvalue('LIB_TARGETS') }} {{ tvalue('LIBS_FRAMEWORKS_DEPS')}})
+
+{%- endfor %}
+{% endblock %}

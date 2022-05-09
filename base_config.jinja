@@ -1,0 +1,40 @@
+########## MACROS ###########################################################################
+#############################################################################################
+{{macros_and_functions}}
+
+{{cmake_version_check}}
+
+include(${CMAKE_CURRENT_LIST_DIR}/{{filename}}Targets.cmake)
+
+{% block find_dependencies %}
+########## FIND DEPENDENDENCIES #############################################################
+#############################################################################################
+# Library dependencies
+include(CMakeFindDependencyMacro)
+{% for dep_filename in public_deps_filenames -%}
+if(NOT {{dep_filename}}_FOUND)
+    if(${CMAKE_VERSION} VERSION_LESS "3.9.0")
+        find_package({{dep_filename}} REQUIRED NO_MODULE)
+    else()
+        find_dependency({{dep_filename}} REQUIRED NO_MODULE)
+    endif()
+else()
+    message(STATUS "Dependency {{dep_filename}} already found")
+endif()
+{%- endfor %}
+{% endblock %}
+
+{% block target_props %}
+########## TARGET PROPERTIES ################################################################
+#############################################################################################
+{% endblock %}
+{%- macro include_build_modules(prefix, configs) -%}
+# Build modules
+foreach(_BUILD_MODULE_PATH in LISTS {%- for config in configs -%}{{ prefix+'_BUILD_MODULES_PATHS_'+config.upper() | cmake_val }}{%- endfor -%})
+    include(${_BUILD_MODULE_PATH})
+endforeach()
+{%- endmacro -%}
+########## MODULES BUILD ####################################################################
+#############################################################################################
+{% block build_modules %}
+{% endblock %}
