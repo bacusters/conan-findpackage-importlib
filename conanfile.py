@@ -191,7 +191,7 @@ class CMakeData:
 
 
 class CMakeFindPackageMultiGeneratorCustom(GeneratorComponentsMixin, Generator):
-    name = "cmake_find_package_multi_custom"
+    name = "cmake_config_find_package"
     # Mapping from CMake variable type to key in cpp_info object of Conan.
     component_vars = {
         'INCLUDE_DIRS': dict(key='include_paths', filter='cmake_pathsjoin'),
@@ -431,7 +431,7 @@ class CMakeFindPackageMultiGeneratorCustom(GeneratorComponentsMixin, Generator):
 
 
 class CustomConanCmakeGen(ConanFile):
-    name = "customcmakegen"
+    name = "cmake_config_find_package"
     version = "0.1"
     url = "https://github.com/bacusters/customcmakegen"
     license = "MIT"
