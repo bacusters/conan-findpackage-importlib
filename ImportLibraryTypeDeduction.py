@@ -28,25 +28,36 @@ class ImportLibraryTypeDeduction:
             if file_to_try.exists():
                 dll_location = str(file_to_try)
         if dll_location is None:
-            raise Exception("Could not locate dll {}. Tried: {}".format(dll_to_find,
+            raise Exception("[ImportLibraryTypeDeduction] Could not locate dll {}. Tried: {}".format(dll_to_find,
             ','.join([str(Path(cpp_info.rootpath)/b) for b in cpp_info.bindirs])))
         return dll_location
 
     def deduce_windows_import_type(self, lib_path, cpp_info):
         # Enable vc
         first_line = ''
+        output_dump = ''
         with run_with_env(self._vcvars_env):
             process = subprocess.run(
                 ['lib', '/LIST', '/NOLOGO', lib_path], capture_output=True, encoding='utf-8')
             output_dump = process.stdout
             for line in output_dump.split('\n'):
                 first_line = line.strip()
+                if len(first_line) > 0:
+                    break
         if first_line.strip().endswith('.obj'):
             return {'import_type':'STATIC', 'has_importlib':False}
         else:
             # Heuristcally find the dll corresponding to importlib.
             dll_to_find = first_line.strip()
-            dll_location = ImportLibraryTypeDeduction.get_dll_location(dll_to_find, cpp_info)
+            try:
+                dll_location = ImportLibraryTypeDeduction.get_dll_location(dll_to_find, cpp_info)
+            except Exception as e:
+                print('[ImportLibraryTypeDeduction] Got exception:')
+                print(e)
+                print('Output of LIB was:')
+                print(output_dump)
+                print('While searching "{}"'.format(dll_to_find))
+                raise e
             return {'import_type':'SHARED', 'has_importlib':True, 
                 'importlib':lib_path,'dll_location':dll_location}
 
@@ -74,6 +85,7 @@ class ImportLibraryTypeDeduction:
             if len(lib_files) == 1:
                 return self._deduce_import_type(lib_files[0], cpp_info)
             else:
-                raise Exception("Not sure how to handle multiple files")
+                # For now, we assume that multiple libs must be an interface target
+                return {'import_type':'INTERFACE', 'has_importlib':False}
         # Default to INTERFACe if no library can be found
         return {'import_type':'INTERFACE', 'has_importlib':False}
