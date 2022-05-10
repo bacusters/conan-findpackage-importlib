@@ -25,10 +25,10 @@ from ImportLibraryTypeDeduction import ImportLibraryTypeDeduction
 
 
 class PackageSpec:
-    def __init__(self, pkg_name: str, cpp_info):
+    def __init__(self, pkg_name: str, filename: str, findname: str, cpp_info):
         self.name = pkg_name
-        self.filename = self._get_filename(cpp_info)
-        self.findname = self._get_name(cpp_info)
+        self.filename = filename
+        self.findname = findname
         self.namespace = self.findname
         self.version = cpp_info.version
         self.public_deps_filenames = []
@@ -190,7 +190,7 @@ class CMakeData:
     """)
 
 
-class CMakeFindPackageMultiGeneratorCustom(GeneratorComponentsMixin, Generator):
+class CmakeConfigFindPackage(GeneratorComponentsMixin, Generator):
     name = "cmake_config_find_package"
     # Mapping from CMake variable type to key in cpp_info object of Conan.
     component_vars = {
@@ -212,7 +212,7 @@ class CMakeFindPackageMultiGeneratorCustom(GeneratorComponentsMixin, Generator):
     }
 
     def __init__(self, conanfile):
-        super(CMakeFindPackageMultiGeneratorCustom, self).__init__(conanfile)
+        super(CmakeConfigFindPackage, self).__init__(conanfile)
         self.configuration = str(self.conanfile.settings.build_type)
         self.configurations = [
             v for v in conanfile.settings.build_type.values_range if v != "None"]
@@ -228,7 +228,7 @@ class CMakeFindPackageMultiGeneratorCustom(GeneratorComponentsMixin, Generator):
             CMakeData.apple_frameworks_macro,
             CMakeData.conan_package_library_targets,
         ])
-        CMakeFindPackageMultiGeneratorCustom.setup_cmake_filters(
+        CmakeConfigFindPackage.setup_cmake_filters(
             self.template_env)
 
         self.library_deduce = ImportLibraryTypeDeduction(conanfile)
@@ -260,7 +260,7 @@ class CMakeFindPackageMultiGeneratorCustom(GeneratorComponentsMixin, Generator):
         return obj.get_filename(cls.name)
 
     def _get_components_of_dependency(self, pkg_name, cpp_info):
-        components = super(CMakeFindPackageMultiGeneratorCustom,
+        components = super(CmakeConfigFindPackage,
                            self)._get_components(pkg_name, cpp_info)
         ret = []
         for comp_genname, comp, comp_requires_gennames in components:
@@ -270,7 +270,7 @@ class CMakeFindPackageMultiGeneratorCustom(GeneratorComponentsMixin, Generator):
                 ["{}::{}".format(*it) for it in comp_requires_gennames])
             deps_cpp_cmake.build_module_paths = cpp_info.build_modules_paths.get(
                 self.name, [])
-            import_lib_info = self.import_library_info_from_cppinfo(
+            import_lib_info = self.library_deduce.import_library_info_from_cppinfo(
                 deps_cpp_cmake)
             deps_cpp_cmake.import_lib_info = import_lib_info
             ret.append((comp_genname, deps_cpp_cmake))
@@ -318,7 +318,7 @@ class CMakeFindPackageMultiGeneratorCustom(GeneratorComponentsMixin, Generator):
                               )
 
     def generate_dependency_without_components(self, cpp_info, pkg: PackageSpec, bt: BuildTypeSpec, output_files: dict[str, str]):
-        self._render_template('config.jinja', self._config_filename(pkg.filename), output_files,
+        self._render_template('config_single.jinja', self._config_filename(pkg.filename), output_files,
                               filename=pkg.filename,
                               name=pkg.findname,
                               namespace=pkg.namespace,
@@ -351,7 +351,8 @@ class CMakeFindPackageMultiGeneratorCustom(GeneratorComponentsMixin, Generator):
 
     def generate_dependency_files(self, output_files: dict[str, str], pkg_name: str, cpp_info, buildtype_spec: BuildTypeSpec):
         self._validate_components(cpp_info)
-        pkg = PackageSpec(pkg_name, cpp_info)
+        pkg = PackageSpec(pkg_name, self._get_filename(
+            cpp_info), self._get_name(cpp_info), cpp_info)
 
         public_deps = self.get_public_deps(cpp_info)
         deps_names = []
@@ -430,21 +431,21 @@ class CMakeFindPackageMultiGeneratorCustom(GeneratorComponentsMixin, Generator):
         return tmp
 
 
-class CustomConanCmakeGen(ConanFile):
-    name = "cmake_config_find_package"
+class CmakeConfigFindPackagePackage(ConanFile):
+    name = "cmake-config-find-package"
     version = "0.1"
     url = "https://github.com/bacusters/customcmakegen"
     license = "MIT"
-    exports = ['config_base.jinja',
-'config_components.jinja',
-'config_single.jinja',
-'config_version.jinja',
-'ImportLibraryTypeDeduction.py',
-'IndentedPrint.py',
-'README.md',
-'target_buildtype_base.jinja',
-'target_buildtype_components.jinja',
-'target_buildtype_single.jinja',
-'target_properties.jinja',
-'targets.jinja']
-
+    exports = ['build_modules.jinja',
+               'config_base.jinja',
+               'config_components.jinja',
+               'config_single.jinja',
+               'config_version.jinja',
+               'ImportLibraryTypeDeduction.py',
+               'IndentedPrint.py',
+               'README.md',
+               'target_buildtype_base.jinja',
+               'target_buildtype_components.jinja',
+               'target_buildtype_single.jinja',
+               'target_properties.jinja',
+               'targets.jinja']
