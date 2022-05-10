@@ -1,4 +1,4 @@
-{% extends "base_config.tpl" %}
+{% extends "config_base.jinja" %}
 
 {% block target_props %}
 ########## TARGETS PROPERTIES ###############################################################
@@ -48,6 +48,7 @@ endif()
 {% endblock %}
 
 {% block build_modules %}
+{% import 'build_modules.jinja' as mods %}
 ########## BUILD MODULES ####################################################################
 #############################################################################################
 {%- for comp_name, comp in components %}

@@ -28,12 +28,6 @@ endif()
 ########## TARGET PROPERTIES ################################################################
 #############################################################################################
 {% endblock %}
-{%- macro include_build_modules(prefix, configs) -%}
-# Build modules
-foreach(_BUILD_MODULE_PATH in LISTS {%- for config in configs -%}{{ prefix+'_BUILD_MODULES_PATHS_'+config.upper() | cmake_val }}{%- endfor -%})
-    include(${_BUILD_MODULE_PATH})
-endforeach()
-{%- endmacro -%}
 ########## MODULES BUILD ####################################################################
 #############################################################################################
 {% block build_modules %}

@@ -1,11 +1,11 @@
-{% extends "base_config.tpl" %}
+{% extends "config_base.jinja" %}
 
 {% block target_props %}
-{% include 'target_properties.tpl' %}
+{% include 'target_properties.jinja' %}
 {% endblock %}
 
 {% block build_modules %}
-{% import 'build_modules.tpl' as mods %}
+{% import 'build_modules.jinja' as mods %}
 {{ mods.include_build_modules(name,configs) }}
 {% endblock %}
 

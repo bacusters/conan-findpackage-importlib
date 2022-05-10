@@ -1,4 +1,4 @@
-{% extends 'base_target_buildtype.tpl' %}
+{% extends 'target_buildtype_base.jinja' %}
 {% block global_vars %}
 {{ super() }}
 set({{ pkg.name }}_COMPONENTS_{{ build_type }} {{ pkg_components }})
@@ -15,9 +15,9 @@ set({{ pkg.name }}_COMPONENTS_{{ build_type }} {{ pkg_components }})
 {%- endmacro -%}
 
 ########### COMPONENT {{ comp_name }} VARIABLES #############################################
-{%- for cmake_name, mapping in component_vars.items() -%}
+{% for cmake_name, mapping in component_vars.items() -%}
 set({{ tvar(cmake_name)}} {{ comp[mapping['key']] | cmake_apply_filter(mapping)}})
-{%- endfor %}
+{% endfor %}
 set({{ tvar('LINKER_FLAGS_LIST') }}
         $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ comp.sharedlinkflags_list }}>
         $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ comp.sharedlinkflags_list }}>
